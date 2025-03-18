@@ -3,7 +3,12 @@
   "name": "Email Spam Detector",
   "version": "1.0",
   "description": "Detects spam/ham content on webpages",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "clipboardWrite"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
