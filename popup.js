@@ -1,9 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const loadingDiv = document.getElementById('loading');
     const emailsDiv = document.getElementById('emails');
+    const summaryDiv = document.getElementById('summary');
     
     loadingDiv.style.display = 'block';
     emailsDiv.innerHTML = '';
+    summaryDiv.innerHTML = '';
 
     try {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -47,6 +49,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <p><strong>Confidence:</strong> ${result.confidence}%</p>
                         `;
                         emailsDiv.prepend(analysisDiv);
+
+                        // Display summary if available
+                        if (result.summary) {
+                            summaryDiv.innerHTML = `
+                                <div class="summary-title">Content Summary</div>
+                                <div class="summary-content">${result.summary}</div>
+                            `;
+                        }
                     }
                 } catch (analyzeError) {
                     console.error('Analysis error:', analyzeError);

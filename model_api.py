@@ -1,16 +1,34 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import pickle
 import numpy as np
 from collections import Counter
 import re
+import torch
+from transformers import T5Tokenizer, T5ForConditionalGeneration, pipeline
+from huggingface_hub import login
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# Load the saved model
+# Initialize HuggingFace with token from environment variable
+login(os.getenv('HUGGINGFACE_TOKEN'))
+
+# Device configuration
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"Using device: {device}")
+
+# Load the saved spam detection model
 with open('spam_pipeline.pkl', 'rb') as model_file:
     model = pickle.load(model_file)
+
+# Initialize summarization model
+summarizer = pipeline("summarization", model="Falconsai/text_summarization", device=0 if torch.cuda.is_available() else -1)
 
 def get_important_features(text, vectorizer, classifier):
     # Get feature names
@@ -60,6 +78,20 @@ def check_scam_indicators(text):
     
     return indicators_found
 
+def summarize_text(input_text):
+    word_count = len(input_text.split())
+    max_length = min(512, word_count // 2)
+    min_length = max_length // 2
+
+    chunks = [input_text[i:i+512] for i in range(0, len(input_text), 512)]
+    summaries = [summarizer(chunk, max_length=max_length, min_length=min_length)[0]['summary_text'] for chunk in chunks]
+    print(f"Summarized into {len(summaries)} chunks")
+    return " ".join(summaries)
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.json
@@ -107,14 +139,38 @@ def predict():
         print(f"- {feature['phrase']}: {feature['importance']:.4f}")
     print("=== END OF ANALYSIS ===\n")
     
+    # Add summarization if text is long enough (e.g., more than 100 words)
+    summary = None
+    if len(text.split()) >= 35:
+        try:
+            summary = summarize_text(text)
+        except Exception as e:
+            print(f"Summarization error: {e}")
+            summary = None
+
     return jsonify({
         'prediction': result,
         'confidence': round(confidence, 2),
         'important_features': important_features,
         'text_length': len(text),
         'word_count': len(text.split()),
-        'scam_indicators': scam_indicators
+        'scam_indicators': scam_indicators,
+        'summary': summary
     })
 
+@app.route('/summarize', methods=['POST'])
+def summarize_route():
+    try:
+        data = request.get_json()
+        input_text = data.get('text', '')
+        if not input_text:
+            return jsonify({'error': 'No text provided'}), 400
+
+        summary = summarize_text(input_text)
+        return jsonify({'summary': summary})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
-    app.run(port=5000)
+    app.run(debug=True)
+

@@ -166,3 +166,33 @@ body.dark-theme {
     justify-content: space-between;
     align-items: center;
 }
+
+.summary-section {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f0f8ff;
+    border: 1px solid #b8d4f5;
+    border-radius: 4px;
+}
+
+.summary-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #2c5282;
+}
+
+.summary-content {
+    font-size: 13px;
+    line-height: 1.4;
+    color: #444;
+}
+
+/* Dark theme support */
+body.dark-theme .summary-section {
+    background-color: #1a365d;
+    border-color: #2a4365;
+}
+
+body.dark-theme .summary-content {
+    color: #e2e8f0;
+}
